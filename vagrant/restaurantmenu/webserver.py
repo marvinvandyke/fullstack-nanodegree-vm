@@ -1,5 +1,13 @@
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from database_setup import Base, Restaurant, MenuItem
 import cgi
+
+engine=create_engine('sqlite:///restaurantmenu.db')
+Base.metadata.bind=engine
+DBSession=sessionmaker(bind=engine)
+session = DBSession()
 
 class webServerHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -13,6 +21,26 @@ class webServerHandler(BaseHTTPRequestHandler):
                 output += "<html><body>"
                 output+="<h1>HEllo!</h1>"
                 output += '''<form method='POST' enctype='multipart/form-data' action='/hello'><h2>What would you like me to say?</h2><input name="message" type="text" ><input type="submit" value="Submit"> </form>'''
+                output+="</body></html>"
+                self.wfile.write(output)
+                print(output)
+                return
+
+            if self.path.endswith("/restaurants"):
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+
+                restaurantItems = session.query(Restaurant).all()
+                output=""
+                output+="<html><body>"
+
+                for restaurantItem in restaurantItems:
+                    output+="<h1> %s </h1>" % restaurantItem.name
+                    output+='''<a href='/restaurants/edit'>Edit</a>'''
+                    output+="<br>"
+                    output+='''<a href='/restaurants/delete'>Delete</a>'''
+
                 output+="</body></html>"
                 self.wfile.write(output)
                 print(output)
@@ -49,7 +77,6 @@ def main():
         server = HTTPServer(('', port), webServerHandler)
         print ("Web server running on port %s" % port)
         server.serve_forever()
-
 
     except KeyboardInterrupt:
         print ("^C entered, stopping web server...")
