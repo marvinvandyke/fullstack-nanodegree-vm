@@ -9,41 +9,58 @@ Base.metadata.bind=engine
 DBSession=sessionmaker(bind=engine)
 session = DBSession()
 
+def listRestaurants(self):
+    self.send_response(200)
+    self.send_header('Content-type', 'text/html')
+    self.end_headers()
+
+    restaurantItems = session.query(Restaurant).all()
+    output=""
+    output+="<html><body>"
+
+    for restaurantItem in restaurantItems:
+        output+="<h1> %s </h1>" % restaurantItem.name
+        output+='''<a href='/restaurants/edit'>Edit</a>'''
+        output+="<br>"
+        output+='''<a href='/restaurants/delete'>Delete</a>'''
+
+    output+="<br>"
+    output+='''<a href='/restaurants/new'><h1>Create new restaurant...</h1></a>'''
+    output+="</body></html>"
+    self.wfile.write(output)
+    print(output)
+    return
+
+def createNewRestaurant(self):
+    self.send_response(200)
+    self.send_header('Content-type', 'text/html')
+    self.end_headers()
+
+    output = ""
+    output+="<html><body>"
+    output+='''<form method="POST" action="/restaurants/new" enctype="multipart/form-data">
+                     Restaurant name:<br>
+                    <input type="text" name="restaurant">
+                    <br>
+                    <input type="submit" value="Create new">
+                </form>'''
+    output+="</body></html>"
+    self.wfile.write(output)
+    print(output)
+
+    return
+
 class webServerHandler(BaseHTTPRequestHandler):
+
     def do_GET(self):
         try:
-            if self.path.endswith("/hello"):
-                self.send_response(200)
-                self.send_header('Content-type', 'text/html')
-                self.end_headers()
-
-                output = ""
-                output += "<html><body>"
-                output+="<h1>HEllo!</h1>"
-                output += '''<form method='POST' enctype='multipart/form-data' action='/hello'><h2>What would you like me to say?</h2><input name="message" type="text" ><input type="submit" value="Submit"> </form>'''
-                output+="</body></html>"
-                self.wfile.write(output)
-                print(output)
-                return
 
             if self.path.endswith("/restaurants"):
-                self.send_response(200)
-                self.send_header('Content-type', 'text/html')
-                self.end_headers()
+                listRestaurants(self)
+                return
 
-                restaurantItems = session.query(Restaurant).all()
-                output=""
-                output+="<html><body>"
-
-                for restaurantItem in restaurantItems:
-                    output+="<h1> %s </h1>" % restaurantItem.name
-                    output+='''<a href='/restaurants/edit'>Edit</a>'''
-                    output+="<br>"
-                    output+='''<a href='/restaurants/delete'>Delete</a>'''
-
-                output+="</body></html>"
-                self.wfile.write(output)
-                print(output)
+            if self.path.endswith("/restaurants/new"):
+                createNewRestaurant(self)
                 return
 
         except IOError:
@@ -57,16 +74,28 @@ class webServerHandler(BaseHTTPRequestHandler):
             ctype, pdict = cgi.parse_header(self.headers.getheader('content-type'))
             if ctype == 'multipart/form-data':
                 fields=cgi.parse_multipart(self.rfile, pdict)
-                messagecontent=fields.get('message')
 
-                output=""
-                output+="<html><body>"
-                output+="<h2>Okay how about this: </h2>"
-                output+="<h1> %s </h1>" % messagecontent[0]
-                output += '''<form method='POST' enctype='multipart/form-data' action='/hello'><h2>What would you like me to say?</h2><input name="message" type="text" ><input type="submit" value="Submit"> </form>'''
-                output += "</body></html>"
-                self.wfile.write(output)
-                print(output)
+                restaurantcontent=fields.get('restaurant')
+                print(restaurantcontent)
+                if len(restaurantcontent) > 0:
+                    print("restaurant")
+                    output = ""
+                    output+="<html><body>"
+                    output+='''<form method="POST" action="/restaurants/new" enctype="multipart/form-data">
+                                    Restaurant name:<br>
+                                    <input type="text" name="restaurant">
+                                    <br>
+                                    <input type="submit" value="Create new">
+                                </form>'''
+                    output+="</body></html>"
+
+                    restaurant1 = Restaurant(name=restaurantcontent[0])
+                    session.add(restaurant1)
+                    session.commit()
+
+                    self.wfile.write(output)
+                    print(output)
+                    return
 
         except:
             pass
