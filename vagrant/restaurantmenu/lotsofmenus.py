@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine
+from sqlalchemy import MetaData
 from sqlalchemy.orm import sessionmaker
  
 from database_setup import Restaurant, Base, MenuItem
@@ -18,7 +19,11 @@ DBSession = sessionmaker(bind=engine)
 # session.rollback()
 session = DBSession()
 
-
+meta = meta = MetaData(bind=engine, reflect=True)
+for table in reversed(meta.sorted_tables):
+    print ('Clear table %s') % table
+    session.execute(table.delete())
+session.commit()
 
 #Menu for UrbanBurger
 restaurant1 = Restaurant(name = "Urban Burger")
